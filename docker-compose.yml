@@ -15,7 +15,7 @@ services:
       context: .
       dockerfile: Dockerfile.web
     ports:
-      - "8080:8080"
+      - "8082:8082"
     networks:
       - app-network
 
