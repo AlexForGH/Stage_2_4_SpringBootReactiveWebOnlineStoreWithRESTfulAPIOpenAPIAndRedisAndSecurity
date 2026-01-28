@@ -1,6 +1,7 @@
 package org.pl.controller;
 
 final class Actions {
+    static final String loginAction = "/login";
     static final String publicItemsAction = "/public/items";
     static final String itemsAction = "/items";
     static final String itemsToCartAction = itemsAction + "/cart";

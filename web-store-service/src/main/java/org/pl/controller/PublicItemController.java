@@ -4,19 +4,18 @@ import org.pl.dao.Item;
 import org.pl.dto.PagingInfoDto;
 import org.pl.service.ItemService;
 import org.pl.service.RedisCacheItemService;
-import org.pl.service.SessionItemsCountsService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.reactive.result.view.Rendering;
-import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-
-import static org.pl.controller.Actions.*;
+import static org.pl.controller.Actions.loginAction;
+import static org.pl.controller.Actions.publicItemsAction;
 
 
 @Controller
@@ -25,16 +24,13 @@ public class PublicItemController {
 
     private final RedisCacheItemService redisCacheItemService;
     private final ItemService itemService;
-    private final SessionItemsCountsService sessionItemsCountsService;
 
     public PublicItemController(
             RedisCacheItemService redisCacheItemService,
-            ItemService itemService,
-            SessionItemsCountsService sessionItemsCountsService
+            ItemService itemService
     ) {
         this.redisCacheItemService = redisCacheItemService;
         this.itemService = itemService;
-        this.sessionItemsCountsService = sessionItemsCountsService;
     }
 
     @GetMapping()
@@ -47,47 +43,29 @@ public class PublicItemController {
             @RequestParam(defaultValue = "1") int pageNumber,
             @RequestParam(defaultValue = "5") int pageSize,
             @RequestParam(defaultValue = "NO") String sort,
-            @RequestParam(required = false) String search,
-            ServerWebExchange exchange
+            @RequestParam(required = false) String search
     ) {
         Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
 
-        return Mono.zip(
-                        itemService.getItemsSorted(pageable, sort, search),
-                        sessionItemsCountsService.getCartItems(exchange),
-                        sessionItemsCountsService.checkItemsCount(exchange)
-                )
-                .map(tuple -> {
-                    Page<List<Item>> itemPage = tuple.getT1();
-                    var cartItems = tuple.getT2();
-                    Integer totalItemsCounts = tuple.getT3();
-
-                    return Rendering.view("public_items")
-                            .modelAttribute("items", itemPage.getContent())
-                            .modelAttribute("sort", sort)
-                            .modelAttribute("search", search)
-                            .modelAttribute("cartItems", cartItems)
-                            .modelAttribute("totalItemsCounts", totalItemsCounts)
-                            .modelAttribute("paging", new PagingInfoDto(
-                                    itemPage.getNumber() + 1,
-                                    itemPage.getTotalPages(),
-                                    itemPage.getSize(),
-                                    itemPage.hasPrevious(),
-                                    itemPage.hasNext()
-                            ))
-                            .modelAttribute("ordersAction", ordersAction)
-                            .modelAttribute("cartAction", cartAction)
-                            .modelAttribute("publicItemsAction", publicItemsAction)
-                            .modelAttribute("itemsToCartAction", itemsToCartAction)
-                            .build();
-                });
+        return itemService.getItemsSorted(pageable, sort, search)
+                .map(itemPage -> Rendering.view("public_items")
+                        .modelAttribute("items", itemPage.getContent())
+                        .modelAttribute("sort", sort)
+                        .modelAttribute("search", search)
+                        .modelAttribute("paging", new PagingInfoDto(
+                                itemPage.getNumber() + 1,
+                                itemPage.getTotalPages(),
+                                itemPage.getSize(),
+                                itemPage.hasPrevious(),
+                                itemPage.hasNext()
+                        ))
+                        .modelAttribute("loginAction", loginAction)
+                        .modelAttribute("publicItemsAction", publicItemsAction)
+                        .build());
     }
 
     @GetMapping(publicItemsAction + "/{id}")
-    public Mono<Rendering> getItemById(
-            @PathVariable Long id,
-            ServerWebExchange exchange
-    ) {
+    public Mono<Rendering> getItemById(@PathVariable Long id) {
         // Получаем item из кэша или БД
         Mono<Item> itemMono = redisCacheItemService.getItemFromCache(id)
                 .switchIfEmpty(Mono.defer(() ->
@@ -99,42 +77,9 @@ public class PublicItemController {
                                 )
                 ));
 
-        return Mono.zip(
-                        itemMono,
-                        itemService.getItemById(id).switchIfEmpty(Mono.error(new RuntimeException("Item not found"))),
-                        sessionItemsCountsService.getCartItems(exchange),
-                        sessionItemsCountsService.checkItemsCount(exchange),
-                        exchange.getSession()
-                )
-                .map(tuple -> {
-
-                    Item item = tuple.getT1();
-
-                    var cartItems = tuple.getT3();
-                    Integer totalItemsCounts = tuple.getT4();
-                    Integer itemCount = cartItems.get(id);
-                    var session = tuple.getT5();
-
-                    // Получаем toast из сессии
-                    String toastMessage = (String) session.getAttributes().get("toastMessage");
-                    String toastType = (String) session.getAttributes().get("toastType");
-
-                    // Удаляем из сессии после получения
-                    session.getAttributes().remove("toastMessage");
-                    session.getAttributes().remove("toastType");
-
-                    return Rendering.view("public_item")
-                            .modelAttribute("item", item)
-                            .modelAttribute("ordersAction", ordersAction)
-                            .modelAttribute("cartAction", cartAction)
-                            .modelAttribute("publicItemsAction", publicItemsAction)
-                            .modelAttribute("itemCounts", itemCount != null ? itemCount : 0)
-                            .modelAttribute("itemsToCartAction", itemsToCartAction)
-                            .modelAttribute("totalItemsCounts", totalItemsCounts)
-                            .modelAttribute("buyAction", buyAction)
-                            .modelAttribute("toastMessage", toastMessage)
-                            .modelAttribute("toastType", toastType)
-                            .build();
-                });
+        return itemMono.map(item -> Rendering.view("public_item")
+                .modelAttribute("item", item)
+                .modelAttribute("publicItemsAction", publicItemsAction)
+                .build());
     }
 }
