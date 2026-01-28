@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8">
+    <title th:text="${item.title}"></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+          rel="stylesheet"/>
+    <link th:href="@{/css/styles_item.css}" rel="stylesheet">
+    <link th:href="@{/css/styles_btn.css}" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div th:if="${toastMessage}"
+     th:attr="data-toast-type=${toastType}"
+     th:text="${toastMessage}"
+     id="toast"
+     class="toast"
+     style="display: none;">
+</div>
+
+<div class="container p-2">
+    <div class="row p-2">
+        <div class="col">
+            <div class="hstack gap-3">
+                <h2>
+                    <span class="badge text-bg-success" th:text="${item.title}"></span>
+                </h2>
+                <a th:href="${publicItemsAction}" class="btn btn-secondary ms-auto bi bi-arrow-left-square"> Главная</a>
+            </div>
+        </div>
+    </div>
+    <div class="row p-2">
+        <div class="col">
+            <div class="card my-item-product-card ">
+                <!-- Изображение на всю ширину карточки -->
+                <img th:src="${item.imgPath}" class="card-img-top" alt="Нет изображения">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${item.title}"></h5>
+                    <h5>
+                        <span class="badge text-bg-success justify-content-end"
+                              th:text="${item.price}+' руб.'"></span>
+                    </h5>
+                    <p class="card-text" th:text="${item.description}"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключение скриптов -->
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+        integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js"
+        integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y"
+        crossorigin="anonymous"></script>
+<script th:src="@{/js/toast.js}"></script>
+</body>
+</html>
