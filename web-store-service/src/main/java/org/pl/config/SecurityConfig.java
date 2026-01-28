@@ -6,7 +6,9 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.authentication.RedirectServerAuthenticationEntryPoint;
+import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler;
+
+import static org.pl.controller.Actions.itemsAction;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -16,12 +18,15 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
         return http
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/", "/login", "/oauth2/**", "/error", "/public/**").permitAll()
+                        .pathMatchers("/", "/login", "/logout", "/oauth2/**", "/error", "/public/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 // Отключаем ВСЮ дефолтную логику формы, т.к. сначала переходит на спринговую форму а с нее на кейклок, что есть лишний шаг
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .oauth2Login(Customizer.withDefaults())
+                .oauth2Login(oauth2 -> oauth2
+                        .authenticationSuccessHandler(new RedirectServerAuthenticationSuccessHandler(itemsAction))
+                )
+                .oauth2Client(Customizer.withDefaults())
                 // ВАЖНО: Отключаем CSRF для OAuth2 редиректов
                 .csrf(csrf -> csrf.disable())
                 // ИЛИ настройка исключений:
